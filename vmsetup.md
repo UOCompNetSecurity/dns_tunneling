@@ -22,7 +22,7 @@
 
 5. Start up the alpine linux VM and enter "root" as the user login. Then run the following sequence of commands to setup internet access  
 
-''' sh 
+``` sh 
 ip link set lo up 
 ip link set eth0 up 
 
@@ -30,21 +30,24 @@ udhcpc -i eth0
 
 # to test, run ping 8.8.8.8
 
+```
+
 ### REPO SETUP 
 
 6. Run the following commands to be able to download packages 
 
-''' sh 
+``` sh 
 setup-apkrepos -c
 # This will prompt for the mirror you would would like to use. press "f" 
 
-''' 
+
+```
 
 ### ALLOCATE NON-VOLATILE SPACE 
 
 7. Run the following commands to make the changes persist among vm startup   
 
-''' sh 
+``` sh 
 apk add syslinux blkid
 
 setup-disk
@@ -52,15 +55,15 @@ setup-disk
 # it will then prompt for how you would like to use it. enter "sys" 
 # enter "y" to if you want to erase the disk 
 
-'''
+```
 
 8. On the virtual box GUI with this VM highlighted, go to Settings -> Storage -> Under Controller IDE, press the bar with the ISO name -> press the blue circle icon -> press remove from virtual device 
 
 9. Back in the VM, enter the following command
-''' sh 
+``` sh 
 poweroff
 
-'''
+```
 
 10. Restart the VM 
 
@@ -68,7 +71,7 @@ poweroff
 
 11. Run the following commands to make network access setup automatically  
 
-''' sh 
+``` sh 
 ip link set lo up 
 ip link set eth0 up 
 rc-update add networking default 
@@ -82,13 +85,13 @@ vi /etc/network/interfaces
 reboot 
 
 # test with ping 8.8.8.8
-''' 
+```
 
 
 ### SETUP SSH 
 
 12. Run the following commands to setup ssh 
-''' sh 
+``` sh 
 apk add openssh 
 
 vi /etc/ssh/sshd_config
@@ -100,25 +103,43 @@ rc-service sshd start
 # before ssh can work, a password must be set for root
 passwd  
 
-''' 
+```
 
 ### CONNECT TO THE VM VIA SSH 
 
 13. The VM can now be connected to via SSH outside of the VM. 
-''' bash 
+``` bash 
 ssh -p <port you used for virtual box port forwarding> root@localhost
-''''
+```
 
 ### CHANGE THE HOST NAME 
 14. The hostname of the VM can be changed to disnguish between vm sessions. 
 
-''' sh 
+``` sh 
 setup-hostname
 vi /etc/hosts
 # Add your hostname on the same line as the line with the 127.0.0.1 ip address 
 
 hostname -F /etc/hostname
-''''
+```
+
+
+### CREATE A COPY VM 
+
+15. For creating additional VMs with the same setup, go to the virtual box GUI, right clock on the powered off VM to clone, press Clone
+16. Give the VM a new name, then under MAC address policy, select "Generate new MAC addresses ..." 
+17. Select "Full Clone" 
+
+18. Go to step 14 to give it a new hostname and step 4 to change the ssh port to use  
+
+
+
+
+
+
+
+
+
 
 
 
