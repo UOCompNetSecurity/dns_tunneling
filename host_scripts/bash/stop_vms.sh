@@ -1,0 +1,3 @@
+VBoxManage controlvm alpine_victim acpipowerbutton
+VBoxManage controlvm dns_resolver acpipowerbutton
+VBoxManage controlvm attacker_server acpipowerbutton
