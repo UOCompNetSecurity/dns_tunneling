@@ -13,7 +13,7 @@ def main(stdscr):
     t_iface = TerminalIFace(stdscr, command_queue, print_queue)
 
     server = DNSServer(
-        TunnelResolver(command_queue, print_queue),
+        TunnelResolver(command_queue, print_queue, "tunneled.txt"),
         logger=DNSLogger(logf=lambda s:()),
         port=53,
         address="0.0.0.0",
@@ -22,7 +22,10 @@ def main(stdscr):
 
     server.start_thread()
 
-    t_iface.run()
+    try: 
+        t_iface.run()
+    except KeyboardInterrupt: 
+        pass
 
 if __name__ == "__main__":
     curses.wrapper(main)

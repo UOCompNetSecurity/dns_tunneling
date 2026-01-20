@@ -9,11 +9,14 @@ from enum import Enum
 class TunnelMessageType(Enum): 
     PROBE = 1
     ACK = 2
+    FILE_START = 3
+    FILE_END = 4
 
 class TunnelResolver(BaseResolver):
-    def __init__(self, command_queue: queue.Queue, print_queue: queue.Queue): 
+    def __init__(self, command_queue: queue.Queue, print_queue: queue.Queue, response_file_path: str): 
         self.command_queue = command_queue
         self.print_queue = print_queue
+        self.response_file_path = response_file_path
         super().__init__()
 
     def resolve(self, request, handler):
@@ -28,18 +31,25 @@ class TunnelResolver(BaseResolver):
 
             decoded = base64.urlsafe_b64decode(payload + "==").decode()
 
-            if decoded == TunnelMessageType.PROBE.name: 
-                self.print_queue.put(PrinterMessage(message=decoded, message_type=PrinterMessageType.PROBE))
-            else: 
-                self.print_queue.put(PrinterMessage(message=decoded, message_type=PrinterMessageType.RECEIVED))
+            response_text = TunnelMessageType.ACK.name
 
-
-            response_text = ""
-            try: 
-                response_text = self.command_queue.get_nowait()
-                self.print_queue.put(PrinterMessage(message=response_text, message_type=PrinterMessageType.SENT))
-            except queue.Empty: 
-                response_text = TunnelMessageType.ACK.name
+            # Send command if one exists on PROBE message 
+            match decoded: 
+                case TunnelMessageType.PROBE.name: 
+                    # self.print_queue.put(PrinterMessage(message=decoded, message_type=PrinterMessageType.PROBE))
+                    try: 
+                        response_text = self.command_queue.get_nowait()
+                        self.print_queue.put(PrinterMessage(message=response_text, message_type=PrinterMessageType.SENT))
+                    except queue.Empty: 
+                        pass
+                case TunnelMessageType.FILE_START.name: 
+                    self.print_queue.put(PrinterMessage(message=decoded, message_type=PrinterMessageType.FILE_START))
+                case TunnelMessageType.FILE_END.name: 
+                    self.print_queue.put(PrinterMessage(message=decoded, message_type=PrinterMessageType.FILE_END))
+                case _: 
+                    self.print_queue.put(PrinterMessage(message=decoded, message_type=PrinterMessageType.RECEIVED))
+                    with open(self.response_file_path, "a") as f: 
+                        f.write(decoded)
 
             encoded_resp = base64.urlsafe_b64encode(
                 response_text.encode()

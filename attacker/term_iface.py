@@ -5,6 +5,10 @@ import curses
 from printer_message import PrinterMessage, PrinterMessageType
 import time 
 import queue
+from enum import Enum
+
+class BuiltInCommand(Enum): 
+    CLEAR = 1
 
 class TerminalIFace:
     def __init__(self, stdscr, command_queue: queue.Queue[str], print_queue: queue.Queue[PrinterMessage]):
@@ -13,6 +17,7 @@ class TerminalIFace:
         self.print_queue = print_queue
 
         self.input_buffer = ""
+        self.received_buffer = ""
 
         curses.noecho()
         stdscr.clear()
@@ -75,19 +80,31 @@ class TerminalIFace:
             self.input_area.refresh()
             while not self.print_queue.empty(): 
                 message = self.print_queue.get()
-                if message.message_type == PrinterMessageType.RECEIVED: 
-                    self._print_received(message.message)
-                elif message.message_type == PrinterMessageType.SENT: 
-                    self._print_sent(message.message)
-                elif message.message_type == PrinterMessageType.ERROR: 
-                    self._print_error(message.message)
-                elif message.message_type == PrinterMessageType.PROBE: 
-                    self._print_probe(message.message)
+                match message.message_type: 
+                    case PrinterMessageType.RECEIVED: 
+                        self.received_buffer += message.message
+                    case PrinterMessageType.SENT: 
+                        self._print_sent(message.message)
+                    case PrinterMessageType.ERROR: 
+                        self._print_error(message.message)
+                    case PrinterMessageType.PROBE: 
+                        self._print_probe(message.message)
+                    case PrinterMessageType.FILE_START: 
+                        self.received_buffer = ""
+                    case PrinterMessageType.FILE_END: 
+                        self._print_received(self.received_buffer)
+                        self.received_buffer = ""
 
             input = self._get_input().strip()
             if input: 
-                self.command_queue.put(input)
-                self._print_queued(input)
+                if input.startswith('!'): 
+                    built_in_command = input[1:]
+                    match built_in_command.upper(): 
+                        case BuiltInCommand.CLEAR.name: 
+                            self._reset_right_window()
+                else: 
+                    self.command_queue.put(input)
+                    self._print_queued(input)
 
             time.sleep(0.02)
                 
@@ -164,33 +181,52 @@ class TerminalIFace:
 
         self.input_area.refresh()
 
-
     def _print_received(self, message: str):
         lines = message.splitlines() or [""]
+        height, width = self.right_win.getmaxyx()
+        if len(lines) + self.cur_right_win_y >= height - 1: 
+            self._reset_right_window()
+            self.cur_right_win_y = self.start_right_win_y
         for line in lines:
             self._print_message(self.right_win, self.cur_right_win_y, line, "+", self.green)
             self.cur_right_win_y += 1
 
     def _print_sent(self, message: str):
         lines = message.splitlines() or [""]
+        height, width = self.left_win.getmaxyx()
+        if len(lines) + self.cur_left_win_y >= height - 1: 
+            self._reset_left_window()
+            self.cur_left_win_y = self.start_left_win_y
         for line in lines:
             self._print_message(self.left_win, self.cur_left_win_y, f"Sent: {line}", "+", self.green)
             self.cur_left_win_y += 1
 
     def _print_queued(self, message: str):
         lines = message.splitlines() or [""]
+        height, width = self.left_win.getmaxyx()
+        if len(lines) + self.cur_left_win_y >= height - 1: 
+            self._reset_left_window()
+            self.cur_left_win_y = self.start_left_win_y
         for line in lines:
             self._print_message(self.left_win, self.cur_left_win_y, f"Command Queued: {line}", "+", self.yellow)
             self.cur_left_win_y += 1
 
     def _print_error(self, message: str):
         lines = message.splitlines() or [""]
+        height, width = self.left_win.getmaxyx()
+        if len(lines) + self.cur_left_win_y >= height - 1: 
+            self._reset_left_window()
+            self.cur_left_win_y = self.start_left_win_y
         for line in lines:
             self._print_message(self.left_win, self.cur_left_win_y, f"Error: {line}", "!", self.red)
             self.cur_left_win_y += 1
 
     def _print_probe(self, message: str):
         lines = message.splitlines() or [""]
+        height, width = self.right_win.getmaxyx()
+        if len(lines) + self.cur_right_win_y >= height - 1: 
+            self._reset_right_window()
+            self.cur_right_win_y = self.start_right_win_y
         for line in lines:
             self._print_message(self.right_win, self.cur_right_win_y, line, "*", self.cyan)
             self.cur_right_win_y += 1
