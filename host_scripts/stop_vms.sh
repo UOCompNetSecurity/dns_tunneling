@@ -1,3 +1,0 @@
-VBoxManage controlvm alpine_victim poweroff
-VBoxManage controlvm dns_resolver poweroff
-VBoxManage controlvm attacker_server poweroff
